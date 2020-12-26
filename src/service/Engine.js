@@ -27,29 +27,64 @@ let engine = class Engine {
     return this.rows;
   }
 
-  insert(tetramino, rotation=null, insertRow=null, insertColumn=null) {
+  getInsertPositions(tetramino, rotation, insertRow = null, insertColumn = null) {
     rotation = rotation ? rotation: tetramino.selectRotation();
     insertRow = (insertRow !== null) ? insertRow : this.insertRow;
     insertColumn = (insertColumn !== null) ? insertColumn : this.insertColumn;
 
+    let insertAvailable = true;
     let insertPositions = [];
     for (let row = 0; row < rotation.length; row++) {
       for (let column = 0; column < rotation[row].length; column++) {
-        if (rotation[row][column] !== 0) {
-          let nextPosition = this.rows[insertRow + row][insertColumn + column];
-          if (nextPosition !== 0) {
-            throw "unavailable_insert";
-          }
-          insertPositions.push([insertRow + row, insertColumn + column]);
+        let positionObject = {};
+        positionObject[rotation[row][column]] = [insertRow + row, insertColumn + column];
+        insertPositions.push(positionObject);
+
+        if (rotation[row][column] === 0) {
+          continue;
+        }
+
+        let nextRow = this.rows[insertRow + row];
+        if (nextRow === undefined) {
+          insertAvailable = false;
+          continue;
+        }
+
+        let nextPosition = this.rows[insertRow + row][insertColumn + column];
+        if (nextPosition === undefined) {
+          insertAvailable = false;
+          continue;
+        }
+
+        if (nextPosition !== 0 && nextPosition !== tetramino) {
+          insertAvailable = false;
+          continue;
         }
       }
     }
 
+    if (insertAvailable) {
+      return insertPositions;
+    } else {
+      return [];
+    }
+  }
+
+  insert(tetramino, insertPositions) {
+    if (insertPositions.length === 0) {
+      throw "unavailable_insert"
+    }
+
+    this.clearCurrentPosition(tetramino);
     insertPositions.forEach(position => {
-      let row = position[0];
-      let column = position[1];
-      this.rows[row][column] = tetramino;
-      tetramino.insertPosition([row, column]);
+      Object.keys(position).forEach(key => {
+        let row = position[key][0];
+        let column = position[key][1];
+        if (key === '1') {
+          this.rows[row][column] = tetramino;
+        }
+        tetramino.insertPosition(position);
+      });
     });
 
     return this.rows;
@@ -59,31 +94,19 @@ let engine = class Engine {
     let currentPositions = tetramino.getPositions();
     let nextRotation = tetramino.nextRotation();
 
-    let startPosition = currentPositions[0];
-    this.clearCurrentPosition(tetramino);
-    return this.insert(tetramino, nextRotation, startPosition[0], startPosition[1]);
+    let startPosition = Object.values(currentPositions[0])[0];
+    let insertPositions = this.getInsertPositions(tetramino, nextRotation, startPosition[0], startPosition[1]);
+    if (insertPositions.length === 0) {
+      throw "unavailable_move"
+    }
+
+    this.insert(tetramino, insertPositions);
+    return this.rows
   }
 
   moveLeft(tetramino) {
     if (tetramino === null) {
       return this.rows;
-    }
-    let currentPositions = tetramino.getPositions();
-
-    for (let i = 0; i < currentPositions.length; i++) {
-      let position = currentPositions[i];
-      let row = position[0];
-      let column = position[1];
-      let leftBlock = this.rows[row][column - 1];
-
-      if (leftBlock === undefined) {
-        throw "unavailable_move";
-      }
-
-      if (leftBlock !== 0 && leftBlock !== tetramino) {
-        // TODO: improve this control!!!
-        throw "unavailable_move";
-      }
     }
 
     this.moveToNewPosition(tetramino, 'left')
@@ -93,23 +116,6 @@ let engine = class Engine {
   moveRight(tetramino) {
     if (tetramino === null) {
       return this.rows;
-    }
-    let currentPositions = tetramino.getPositions();
-
-    for (let i = 0; i < currentPositions.length; i++) {
-      let position = currentPositions[i];
-      let row = position[0];
-      let column = position[1];
-      let rightBlock = this.rows[row][column + 1];
-
-      if (rightBlock === undefined) {
-        throw "unavailable_move";
-      }
-
-      if (rightBlock !== 0 && rightBlock !== tetramino) {
-        // TODO: improve this control!!!
-        throw "unavailable_move";
-      }
     }
 
     this.moveToNewPosition(tetramino, 'right');
@@ -121,25 +127,6 @@ let engine = class Engine {
       return this.rows;
     }
 
-    let currentPositions = tetramino.getPositions();
-
-    for (let i = 0; i < currentPositions.length; i++) {
-      let position = currentPositions[i];
-      let row = position[0];
-      let column = position[1];
-      let nextBlockRow = this.rows[row + 1];
-
-      if (nextBlockRow === undefined) {
-        throw "unavailable_move";
-      }
-
-      let nextBlock = nextBlockRow[column];
-      if (nextBlock !== 0 && nextBlock !== tetramino) {
-        // TODO: improve this control!!!
-        throw "unavailable_move";
-      }
-    }
-
     this.moveToNewPosition(tetramino, 'down');
     return this.rows;
   }
@@ -147,9 +134,9 @@ let engine = class Engine {
   clearCurrentPosition(tetramino) {
     let currentPositions = tetramino.getPositions();
     currentPositions.forEach((position) => {
-      let row = position[0];
-      let column = position[1];
-      if (this.rows[row + 1] !== undefined) {
+      let row = Object.values(position)[0][0];
+      let column = Object.values(position)[0][1];
+      if (this.rows[row][column] === tetramino) {
         this.rows[row][column] = 0;
       }
     });
@@ -157,53 +144,31 @@ let engine = class Engine {
     tetramino.clearPositions();
   }
 
-  // moveToNewPosition(tetramino, direction) {
-  //   let currentPositions = tetramino.getPositions();
-  //   this.clearCurrentPosition(tetramino);
-  //
-  //   let currentRotation = tetramino.getRotation();
-  //   let startPosition = currentPositions[0];
-  //   let row = startPosition[0];
-  //   let column = startPosition[1];
-  //
-  //   if (direction === 'down') {
-  //     this.insert(tetramino, currentRotation, row + 1, column);
-  //   }
-  //
-  //   if (direction === 'left') {
-  //     this.insert(tetramino, currentRotation, row, column - 1);
-  //   }
-  //
-  //   if (direction === 'right') {
-  //     this.insert(tetramino, currentRotation, row, column + 1);
-  //   }
-  // }
-
   moveToNewPosition(tetramino, direction) {
     let currentPositions = tetramino.getPositions();
-    //let currentRotation = tetramino.getRotation();
-    this.clearCurrentPosition(tetramino);
+    let currentRotation = tetramino.getRotation();
 
-    currentPositions.forEach((position) => {
-      let row = position[0];
-      let column = position[1];
-      if (direction === 'down') {
-        if (this.rows[row + 1] !== undefined) {
-          this.rows[row + 1][column] = tetramino;
-          tetramino.insertPosition([row + 1, column]);
-        }
-      } else if (direction === 'left') {
-        if (this.rows[row][column - 1] !== undefined) {
-          this.rows[row][column - 1] = tetramino;
-          tetramino.insertPosition([row, column - 1]);
-        }
-      } else if (direction === 'right') {
-        if (this.rows[row][column + 1] !== undefined) {
-          this.rows[row][column + 1] = tetramino;
-          tetramino.insertPosition([row, column + 1]);
-        }
-      }
-    });
+    let insertRow = Object.values(currentPositions[0])[0][0];
+    let insertColumn = Object.values(currentPositions[0])[0][1];
+
+    if (direction === 'down') {
+      insertRow += 1;
+    }
+
+    if (direction === 'left') {
+      insertColumn -= 1;
+    }
+
+    if (direction === 'right') {
+      insertColumn += 1;
+    }
+
+    let insertPositions = this.getInsertPositions(tetramino, currentRotation, insertRow, insertColumn);
+    if (insertPositions.length === 0) {
+      throw "unavailable_move"
+    }
+
+    this.insert(tetramino, insertPositions);
   }
 }
 

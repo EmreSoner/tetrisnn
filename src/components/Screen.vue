@@ -77,7 +77,8 @@ export default {
 
       try {
         this.currentTetramino = this.selectTetramino();
-        this.board = this.engine.insert(this.currentTetramino);
+        let insertPositions = this.engine.getInsertPositions(this.currentTetramino)
+        this.board = this.engine.insert(this.currentTetramino, insertPositions);
       } catch(err) {
         if (err === "unavailable_insert") {
           clearInterval(this.game);
@@ -108,17 +109,44 @@ export default {
 
     moveLeft: function() {
       this.board = [];
-      this.board = this.engine.moveLeft(this.currentTetramino);
+      let rows = this.engine.rows;
+
+      try {
+        this.board = this.engine.moveLeft(this.currentTetramino);
+      } catch (err) {
+        console.log(err);
+        if (err === "unavailable_move") {
+          this.board = rows;
+        }
+      }
     },
 
     moveRight: function() {
       this.board = [];
-      this.board = this.engine.moveRight(this.currentTetramino);
+      let rows = this.engine.rows;
+
+      try {
+        this.board = this.engine.moveRight(this.currentTetramino);
+      } catch (err) {
+        console.log(err);
+        if (err === "unavailable_move") {
+          this.board = rows;
+        }
+      }
     },
 
     rotate: function() {
       this.board = [];
-      this.board = this.engine.rotate(this.currentTetramino);
+      let rows = this.engine.rows;
+
+      try {
+        this.board = this.engine.rotate(this.currentTetramino);
+      } catch (err) {
+        console.log(err);
+        if (err === "unavailable_move") {
+          this.board = rows;
+        }
+      }
     },
 
     clearSuccessRows() {
@@ -139,7 +167,7 @@ export default {
         } else {
           this.moveDown();
         }
-      }, 1000);
+      }, 250);
     }
   }
 }
@@ -147,7 +175,6 @@ export default {
 
 <style scoped>
   #screen {
-    background-color: black;
     width: 400px;
     height: 600px;
 
@@ -157,13 +184,20 @@ export default {
   }
 
   .block {
+    background-color: gray;
     float: left;
     width: 20px;
     height: 20px;
+    border:1px dotted #f0f0f0;
+    box-shadow:0 0 3px 0 #000;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
   }
 
   .tetramino-block {
     width: 20px;
     height: 20px;
+    box-shadow:0 0 10px 0 #000;
   }
 </style>
