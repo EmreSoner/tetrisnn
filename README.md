@@ -2,7 +2,7 @@
 
 #### Rotate: Space
 #### Move Right: D
-#### Move Left: S
+#### Move Left: A
 #### Move Down(speed up): S
 
 ![Alt text](src/assets/tetrisnn.png?raw=true)
