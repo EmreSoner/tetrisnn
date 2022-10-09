@@ -1,5 +1,12 @@
 # tetrisnn
 
+####Rotate: Space
+####Move Right: D
+####Move Left: S
+####Move Down(speed up): S
+
+![Alt text](src/assets/tetrisnn.png?raw=true)
+
 ## Project setup
 ```
 yarn install
@@ -20,5 +27,4 @@ yarn build
 yarn lint
 ```
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+
